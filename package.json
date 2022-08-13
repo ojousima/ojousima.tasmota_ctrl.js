@@ -1,0 +1,35 @@
+{
+  "name": "ojousima.tasmota_ctrl",
+  "version": "0.0.1",
+  "description": "A project for controlling Tasmota devices over MQTT, complete with data storage to InluxDB",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "tslint -p tsconfig.json  -t json -o tslint-report.json --project . --force",
+    "postversion": "git push && git push --tags",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ojousima/ojousima.tasmota_ctrl.js.git"
+  },
+  "author": "Otso Jousimaa",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/ojousima/ojousima.tasmota_ctrl.js/issues"
+  },
+  "homepage": "https://github.com/ojousima/ojousima.tasmota_ctrl.js#readme",
+  "devDependencies": {
+    "@types/ws": "^8.5.3",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@types/node": "^18.7.3",
+    "influx": "^5.9.3",
+    "mqtt": "^4.3.7"
+  }
+}
