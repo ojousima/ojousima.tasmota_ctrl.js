@@ -25,7 +25,7 @@ const handleSensorMessage = function(topic:String, message:Buffer) {
   //console.log(message.toString())
   // Format data into object
   const data = JSON.parse(message.toString());
-  const id = topic.substring(topic.lastIndexOf('/tasmota_') + '/tasmota_'.length, topic.lastIndexOf('/STATE'));
+  const id = topic.substring(topic.lastIndexOf('/tasmota_') + '/tasmota_'.length, topic.lastIndexOf('/SENSOR'));
   const stateObj = new TasmotaSensor (
       id,
       null,
