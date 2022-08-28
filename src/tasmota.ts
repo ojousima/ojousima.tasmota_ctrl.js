@@ -31,7 +31,7 @@ class TasmotaState {
   public readonly uptimeSec: number;
   public readonly heap: number;
   public readonly sleepMode: string;
-  public readonly sleep: number;  
+  public readonly sleep: number;
   public readonly loadAvg: number;
   public readonly power: string;
   public readonly mqttCount: number;
@@ -96,7 +96,7 @@ class TasmotaSensor {
   public readonly parsedAt: Date;
   public readonly total: number;
   public readonly today: number;
-  public readonly yesterday: number;  
+  public readonly yesterday: number;
   public readonly power: number;
   public readonly apparentPower: string;
   public readonly reactivePower: number;
@@ -135,11 +135,7 @@ class TasmotaSensor {
 
 enum TasmotaSwitchState {
   Off = 0,
-  On = 1
+  On = 1,
 }
 
-export {
-  TasmotaState,
-  TasmotaSensor,
-  TasmotaSwitchState
-}
+export { TasmotaState, TasmotaSensor, TasmotaSwitchState };

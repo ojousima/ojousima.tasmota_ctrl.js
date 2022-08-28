@@ -1,24 +1,20 @@
-const Influx = require('influx');
+const Influx = require("influx");
 import {
   BROKER,
   INFLUX_HOST,
   INFLUX_USER,
   INFLUX_PORT,
   INFLUX_PASSWORD,
-  TASMOTA_DB
-} from '../env';
+  TASMOTA_DB,
+} from "../env";
 
-import {
-  TasmotaState, TasmotaSensor
-} from './tasmota';
+import { TasmotaState, TasmotaSensor } from "./tasmota";
 
-import {
-  TemperatureTarget
-} from './ctrl/temperature/temperatureControl';
+import { TemperatureTarget } from "./ctrl/temperature/temperatureControl";
 
-const tasmotaStateMeasurementName  = 'TasmotaState';
-const tasmotaSensorMeasurementName = 'TasmotaSensor';
-const temperatureTargetMeasurementName = 'TemperatureTarget'
+const tasmotaStateMeasurementName = "TasmotaState";
+const tasmotaSensorMeasurementName = "TasmotaSensor";
+const temperatureTargetMeasurementName = "TemperatureTarget";
 
 /*
 Tasmota Sensor JSON:
@@ -57,7 +53,7 @@ const tasmotaSensorSchema = [
       voltage: Influx.FieldType.FLOAT,
       current: Influx.FieldType.FLOAT,
     },
-    tags: ['mac', 'id']
+    tags: ["mac", "id"],
   },
 ];
 
@@ -103,7 +99,7 @@ const tasmotaStateSchema = [
       powerNumber: Influx.FieldType.INTEGER,
       wifiDowntime: Influx.FieldType.INTEGER,
     },
-    tags: ['mac', 'id']
+    tags: ["mac", "id"],
   },
 ];
 
@@ -115,7 +111,7 @@ const temperatureTargetSchema = [
       hysteresis_low: Influx.FieldType.FLOAT,
       hysteresis_high: Influx.FieldType.FLOAT,
     },
-    tags: ['name']
+    tags: ["name"],
   },
 ];
 
@@ -147,10 +143,10 @@ const TasmotaStateToInflux = function (data: TasmotaState): void {
   // console.log(JSON.stringify(data));
   const influx_samples = [];
 
-  const powerNumber = data.power === "ON" ? 1 : 0
+  const powerNumber = data.power === "ON" ? 1 : 0;
   const dateNanos = new Date(data.parsedAt).getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
-  
+
   const tasmota_point = {
     fields: {
       rssi: data.wifiRssi,
@@ -162,7 +158,7 @@ const TasmotaStateToInflux = function (data: TasmotaState): void {
       mqttCount: data.mqttCount,
       power: data.power,
       powerNumber: powerNumber,
-      wifiDowntime: data.wifiDowntime
+      wifiDowntime: data.wifiDowntime,
     },
     tags: {
       mac: data.mac,
@@ -187,7 +183,7 @@ const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
 
   const dateNanos = new Date(data.parsedAt).getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
-  
+
   const tasmota_point = {
     fields: {
       total: data.total,
@@ -197,7 +193,7 @@ const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
       activePower: data.power,
       factor: data.factor,
       voltage: data.voltage,
-      current: data.current
+      current: data.current,
     },
     tags: {
       mac: data.mac,
@@ -216,21 +212,24 @@ const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
   }
 };
 
-const temperatureTargetToInflux = function (target: TemperatureTarget, name:string): void {
+const temperatureTargetToInflux = function (
+  target: TemperatureTarget,
+  name: string
+): void {
   // console.log(JSON.stringify(data));
   const influx_samples = [];
 
   const dateNanos = new Date().getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
-  
+
   const temperature_point = {
     fields: {
       target: target.targetTemp,
       hysteresis_low: target.lowTemp,
-      hysteresis_high: target.highTemp
+      hysteresis_high: target.highTemp,
     },
     tags: {
-      name: name
+      name: name,
     },
     timestamp: Influx.toNanoDate(dateNanoString),
     measurement: temperatureTargetMeasurementName,
@@ -248,5 +247,5 @@ const temperatureTargetToInflux = function (target: TemperatureTarget, name:stri
 export {
   TasmotaStateToInflux,
   TasmotaSensorToInflux,
-  temperatureTargetToInflux
-}
+  temperatureTargetToInflux,
+};

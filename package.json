@@ -25,6 +25,7 @@
   "homepage": "https://github.com/ojousima/ojousima.tasmota_ctrl.js#readme",
   "devDependencies": {
     "@types/ws": "^8.5.3",
+    "prettier": "^2.7.1",
     "typescript": "^4.7.4"
   },
   "dependencies": {
