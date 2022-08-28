@@ -1,7 +1,14 @@
 import * as mqtt from 'mqtt';
 import { BROKER } from '../env';
-import { TasmotaStateToInflux, TasmotaSensorToInflux } from './influx'
-import { TasmotaState, TasmotaSensor } from './tasmota'
+import { 
+  TasmotaStateToInflux, 
+  TasmotaSensorToInflux
+  } from './influx'
+import { 
+  TasmotaState, 
+  TasmotaSensor,
+  TasmotaSwitchState
+} from './tasmota'
 
 const opts: mqtt.IClientOptions = {};
 
@@ -88,7 +95,7 @@ const mqttInit = function (): void {
     // message is Buffer
     // console.log(message.toString());
 
-    // Topic contains "sensors"
+    // Topic contains "/STATE"
     const state_idx = topic.lastIndexOf('/STATE');
     if(state_idx > 0)
     {
@@ -102,6 +109,32 @@ const mqttInit = function (): void {
   });
 };
 
+const switchSetState = function (switchId:string, state:TasmotaSwitchState): void 
+{
+  const topic:string = 'cmnd/tasmota_' + switchId + '/Power';
+  switch(state){
+    case TasmotaSwitchState.On:
+      client.publish(topic, 'ON');
+      break;
+
+    case TasmotaSwitchState.Off:
+      client.publish(topic, 'OFF');
+      break;
+
+    default:
+      break;
+  }
+}
+
+const temperatureSetTarget = function(roomId:string, target:number):void 
+{
+  // Todo: Parametrize building/apt topic
+  const topic:string = 'building_apt/' + roomId + '/temp/target';
+  client.publish(topic, target.toString());
+}
+
 export {
-  mqttInit
+  mqttInit,
+  switchSetState,
+  temperatureSetTarget
 };

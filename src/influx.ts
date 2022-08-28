@@ -12,8 +12,13 @@ import {
   TasmotaState, TasmotaSensor
 } from './tasmota';
 
+import {
+  TemperatureTarget
+} from './ctrl/temperature/temperatureControl';
+
 const tasmotaStateMeasurementName  = 'TasmotaState';
 const tasmotaSensorMeasurementName = 'TasmotaSensor';
+const temperatureTargetMeasurementName = 'TemperatureTarget'
 
 /*
 Tasmota Sensor JSON:
@@ -102,6 +107,18 @@ const tasmotaStateSchema = [
   },
 ];
 
+const temperatureTargetSchema = [
+  {
+    measurement: temperatureTargetMeasurementName,
+    fields: {
+      target: Influx.FieldType.FLOAT,
+      hysteresis_low: Influx.FieldType.FLOAT,
+      hysteresis_high: Influx.FieldType.FLOAT,
+    },
+    tags: ['name']
+  },
+];
+
 const tasmotaStateInflux = new Influx.InfluxDB({
   host: INFLUX_HOST,
   database: TASMOTA_DB,
@@ -114,6 +131,14 @@ const tasmotaSensorInflux = new Influx.InfluxDB({
   host: INFLUX_HOST,
   database: TASMOTA_DB,
   schema: tasmotaSensorSchema,
+  username: INFLUX_USER,
+  password: INFLUX_PASSWORD,
+});
+
+const temperatureTargetInflux = new Influx.InfluxDB({
+  host: INFLUX_HOST,
+  database: TASMOTA_DB,
+  schema: temperatureTargetSchema,
   username: INFLUX_USER,
   password: INFLUX_PASSWORD,
 });
@@ -191,7 +216,37 @@ const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
   }
 };
 
+const temperatureTargetToInflux = function (target: TemperatureTarget, name:string): void {
+  // console.log(JSON.stringify(data));
+  const influx_samples = [];
+
+  const dateNanos = new Date().getTime() * 1000 * 1000;
+  const dateNanoString = dateNanos.toString();
+  
+  const temperature_point = {
+    fields: {
+      target: target.targetTemp,
+      hysteresis_low: target.lowTemp,
+      hysteresis_high: target.highTemp
+    },
+    tags: {
+      name: name
+    },
+    timestamp: Influx.toNanoDate(dateNanoString),
+    measurement: temperatureTargetMeasurementName,
+  };
+  influx_samples.push(temperature_point);
+  try {
+    tasmotaSensorInflux.writePoints(influx_samples);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error(`Error saving data to InfluxDB! ${err.stack}`);
+    }
+  }
+};
+
 export {
   TasmotaStateToInflux,
-  TasmotaSensorToInflux
+  TasmotaSensorToInflux,
+  temperatureTargetToInflux
 }

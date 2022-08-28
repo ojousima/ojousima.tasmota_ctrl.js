@@ -131,10 +131,15 @@ class TasmotaSensor {
     this.voltage = voltage;
     this.current = current;
   }
+}
 
+enum TasmotaSwitchState {
+  Off = 0,
+  On = 1
 }
 
 export {
   TasmotaState,
-  TasmotaSensor
+  TasmotaSensor,
+  TasmotaSwitchState
 }

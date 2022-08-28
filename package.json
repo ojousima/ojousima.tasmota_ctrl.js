@@ -30,6 +30,7 @@
   "dependencies": {
     "@types/node": "^18.7.3",
     "influx": "^5.9.3",
+    "luxon": "^3.0.1",
     "mqtt": "^4.3.7"
   }
 }
