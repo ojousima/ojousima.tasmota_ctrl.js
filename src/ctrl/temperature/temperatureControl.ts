@@ -4,7 +4,7 @@ import { temperatureTargetToInflux } from "../../influx";
 import { TasmotaSwitchState } from "../../tasmota";
 import { TemperatureProfile } from "./temperatureProfile";
 import { TemperatureTarget } from "./temperatureTarget";
-import { TemperatureMeasurement } from "./TemperatureMeasurement";
+import { TemperatureMeasurement } from "./temperatureMeasurement";
 
 class TemperatureControl {
   private temperatureHysteresis: number;
