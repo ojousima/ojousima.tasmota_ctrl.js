@@ -1,96 +1,87 @@
-const { DateTime } = require("luxon");
-import { temperatureSetTarget } from "../../mqtt";
+import { DateTime } from "luxon";
+import { temperatureSetTarget, switchSetState } from "../../mqtt";
 import { temperatureTargetToInflux } from "../../influx";
-
-class TemperatureProfile {
-  private target: number[];
-
-  constructor() {
-    // TODO: Read per room / hour from JSON or smth
-    this.target = [];
-    this.target[0] = 18;
-    this.target[1] = 18;
-    this.target[2] = 18;
-    this.target[3] = 18;
-    this.target[4] = 18;
-    this.target[5] = 18;
-    this.target[6] = 18;
-    this.target[7] = 15;
-    this.target[8] = 15;
-    this.target[9] = 15;
-    this.target[10] = 15;
-    this.target[11] = 15;
-    this.target[12] = 15;
-    this.target[13] = 15;
-    this.target[14] = 15;
-    this.target[15] = 15;
-    this.target[16] = 18;
-    this.target[17] = 18;
-    this.target[18] = 18;
-    this.target[19] = 18;
-    this.target[20] = 18;
-    this.target[21] = 18;
-    this.target[22] = 18;
-    this.target[23] = 18;
-  }
-
-  get targetNow(): number {
-    return this.target[DateTime.now().hour];
-  }
-}
+import { TasmotaSwitchState } from "../../tasmota";
+import { TemperatureProfile } from "./temperatureProfile";
+import { TemperatureTarget } from "./temperatureTarget";
+import { TemperatureMeasurement } from "./TemperatureMeasurement";
 
 class TemperatureControl {
   private temperatureHysteresis: number;
   private profile: TemperatureProfile;
   private roomName: string;
+  private _measurement: TemperatureMeasurement = new TemperatureMeasurement(
+    0,
+    0
+  );
   private ctrlTimer;
   constructor(name: string) {
     this.temperatureHysteresis = 1.0;
     this.profile = new TemperatureProfile();
     this.roomName = name;
-    this.ctrlTimer = setInterval(
-      function (ctrl: TemperatureControl) {
-        const target = new TemperatureTarget(
-          ctrl.profile.targetNow,
-          ctrl.temperatureHysteresis
-        );
-        ctrl.printTarget(target);
-        temperatureTargetToInflux(target, ctrl.roomName);
-      },
-      60000,
-      this
-    );
+    this.ctrlTimer = setInterval(() => {
+      const target = new TemperatureTarget(
+        this.profile.targetNow,
+        this.temperatureHysteresis
+      );
+      let action: TasmotaSwitchState = TasmotaSwitchState.Off;
+      try {
+        if (!this._measurement.isValid) {
+          action = TasmotaSwitchState.Off;
+        } else if (this.measurement < target.lowTemp) {
+          action = TasmotaSwitchState.On;
+        } else if (this.measurement > target.highTemp) {
+          action = TasmotaSwitchState.Off;
+        } else {
+          action = TasmotaSwitchState.Hold;
+        }
+
+        this.printAction(target, this.measurement, action);
+        temperatureTargetToInflux(target, this.roomName);
+      } catch (e) {
+        console.log(JSON.stringify(e));
+      }
+      switchSetState(this.roomName, action);
+    }, 60000);
   }
-  printTarget(target: TemperatureTarget): void {
+  printAction(
+    target: TemperatureTarget,
+    measurement: number,
+    action: TasmotaSwitchState
+  ): void {
     console.log(
-      "Heating up " + this.roomName + " to " + target.targetTemp + " degrees"
+      this.roomName +
+        " is at " +
+        measurement.toFixed(1) +
+        " degrees, target is " +
+        target.targetTemp.toFixed(1) +
+        " degrees. Action: " +
+        action
     );
   }
-}
-
-class TemperatureTarget {
-  private target: number;
-  private hysteresis_low: number;
-  private hysteresis_high: number;
-  constructor(target: number, hysteresis: number) {
-    this.target = target;
-    this.hysteresis_low = target - hysteresis;
-    this.hysteresis_high = target + hysteresis;
-  }
-  get targetTemp(): number {
-    return this.target;
-  }
-  get lowTemp(): number {
-    return this.hysteresis_low;
-  }
-  get highTemp(): number {
-    return this.hysteresis_high;
+  get measurement() {
+    if (this._measurement.isValid) {
+      return this._measurement.temperature;
+    } else {
+      throw new Error(
+        "Room " + this.roomName + " does not have a valid measurement"
+      );
+    }
   }
 }
 
-const ctrlOffice = new TemperatureControl("Office");
-const ctrlKitchen = new TemperatureControl("Kitchen");
-const ctrlLiving = new TemperatureControl("Livingroom");
-const ctrlBedroom = new TemperatureControl("Bedroom");
+interface ITempCtrl {
+  [index: string]: TemperatureControl;
+}
 
-export { TemperatureTarget };
+const ctrlRooms = {} as ITempCtrl;
+
+const TemperatureControlInit = (): void => {
+  // TODO: Parametrize room names
+  ctrlRooms.Office = new TemperatureControl("Office");
+  ctrlRooms.Kitchen = new TemperatureControl("Kitchen");
+  ctrlRooms.Livingroom = new TemperatureControl("Livingroom");
+  ctrlRooms.Bedroom = new TemperatureControl("Bedroom");
+};
+
+export { TemperatureControlInit };

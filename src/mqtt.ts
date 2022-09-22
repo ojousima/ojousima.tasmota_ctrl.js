@@ -7,30 +7,36 @@ const opts: mqtt.IClientOptions = {};
 
 const client: mqtt.Client = mqtt.connect(`mqtt://${BROKER}`, opts);
 
-const tasmotaTimeToSecs = function (tasmotaTime: String) {
+const tasmotaTimeToSecs = (tasmotaTime: string) => {
   // "0T00:00:03"
-  const days = parseInt(tasmotaTime.substring(0, tasmotaTime.lastIndexOf("T")));
+  const days = parseInt(
+    tasmotaTime.substring(0, tasmotaTime.lastIndexOf("T")),
+    10
+  );
   const hours = parseInt(
     tasmotaTime.substring(
       tasmotaTime.lastIndexOf("T") + 1,
       tasmotaTime.indexOf(":")
-    )
+    ),
+    10
   );
   const minutes = parseInt(
     tasmotaTime.substring(
       tasmotaTime.indexOf(":") + 1,
       tasmotaTime.lastIndexOf(":")
-    )
+    ),
+    10
   );
   const seconds = parseInt(
-    tasmotaTime.substring(tasmotaTime.lastIndexOf(":") + 1)
+    tasmotaTime.substring(tasmotaTime.lastIndexOf(":") + 1),
+    10
   );
   return days * 24 * 60 * 60 + hours * 60 * 60 + minutes * 60 + seconds;
 };
 
-const handleSensorMessage = function (topic: String, message: Buffer) {
-  //console.log("Got Sensor Message:");
-  //console.log(message.toString())
+const handleSensorMessage = (topic: string, message: Buffer) => {
+  // console.log("Got Sensor Message:");
+  // console.log(message.toString())
   // Format data into object
   const data = JSON.parse(message.toString());
   const id = topic.substring(
@@ -39,7 +45,7 @@ const handleSensorMessage = function (topic: String, message: Buffer) {
   );
   const stateObj = new TasmotaSensor(
     id,
-    null,
+    "AA:BB:CC:DD:EE:FF",
     new Date(),
     data.ENERGY.Total,
     data.ENERGY.Today,
@@ -51,14 +57,14 @@ const handleSensorMessage = function (topic: String, message: Buffer) {
     data.ENERGY.Voltage,
     data.ENERGY.Current
   );
-  //console.log("Tasomta object:");
-  //console.log(JSON.stringify(stateObj));
+  // console.log("Tasomta object:");
+  // console.log(JSON.stringify(stateObj));
   // Call InfluxDB to store the object.
   TasmotaSensorToInflux(stateObj);
 };
-const handleStateMessage = function (topic: String, message: Buffer) {
-  //console.log("Got State Message: " + topic);
-  //console.log(message.toString())
+const handleStateMessage = (topic: string, message: Buffer) => {
+  // console.log("Got State Message: " + topic);
+  // console.log(message.toString())
   // Format data into object
   const data = JSON.parse(message.toString());
   const id = topic.substring(
@@ -67,7 +73,7 @@ const handleStateMessage = function (topic: String, message: Buffer) {
   );
   const stateObj = new TasmotaState(
     id,
-    null,
+    "AA:BB:CC:DD:EE:FF",
     new Date(),
     data.UptimeSec,
     data.Heap,
@@ -79,43 +85,65 @@ const handleStateMessage = function (topic: String, message: Buffer) {
     data.Wifi.RSSI,
     tasmotaTimeToSecs(data.Wifi.Downtime)
   );
-  //console.log("Tasomta object:");
-  //console.log(JSON.stringify(stateObj));
+  // console.log("Tasomta object:");
+  // console.log(JSON.stringify(stateObj));
   // Call InfluxDB to store the object.
   TasmotaStateToInflux(stateObj);
 };
 
-const mqttInit = function (): void {
-  client.on("connect", function () {
-    client.subscribe("#", function (err) {
+const handleMeasurementMessage = (topic: string, message: Buffer) => {
+  const data = JSON.parse(message.toString());
+  const id = topic.substring(
+    topic.lastIndexOf("building_apt/") + "building_apt/".length,
+    topic.lastIndexOf("/temp/current")
+  );
+};
+
+const mqttInit = () => {
+  client.on("connect", () => {
+    // TODO: Parametrize mac addresses.
+    client.subscribe("ruuvi/D4:58:E3:F8:68:11/#", (err) => {
       if (!err) {
-        console.log("MQTT Sub ok");
+        console.log("MQTT Sub to GW ok");
+      } else {
+        console.error(err, "MQTT problem");
+      }
+    });
+    client.subscribe("tele/#", (err) => {
+      if (!err) {
+        console.log("MQTT Sub to Tasmota ok");
       } else {
         console.error(err, "MQTT problem");
       }
     });
   });
 
-  client.on("message", function (topic, message) {
+  client.on("message", (topic, message) => {
     // message is Buffer
     // console.log(message.toString());
-
-    // Topic contains "/STATE"
-    const state_idx = topic.lastIndexOf("/STATE");
-    if (state_idx > 0) {
-      handleStateMessage(topic, message);
-    }
-    const sensors_idx = topic.lastIndexOf("/SENSOR");
-    if (sensors_idx > 0) {
-      handleSensorMessage(topic, message);
+    try {
+      // Topic contains "/STATE"
+      const stateIdx = topic.lastIndexOf("/STATE");
+      if (stateIdx > 0) {
+        handleStateMessage(topic, message);
+      }
+      const sensorsIdx = topic.lastIndexOf("/SENSOR");
+      if (sensorsIdx > 0) {
+        handleSensorMessage(topic, message);
+      }
+      const tempCurrentIdx = topic.lastIndexOf("/ruuvi");
+      if (tempCurrentIdx > 0) {
+        handleMeasurementMessage(topic, message);
+      }
+    } catch (e) {
+      console.log(JSON.stringify(e));
+      console.log(topic, +":\n" + message.toString());
+      return;
     }
   });
 };
 
-const switchSetState = function (
-  switchId: string,
-  state: TasmotaSwitchState
-): void {
+const switchSetState = (switchId: string, state: TasmotaSwitchState) => {
   const topic: string = "cmnd/tasmota_" + switchId + "/Power";
   switch (state) {
     case TasmotaSwitchState.On:
@@ -131,10 +159,21 @@ const switchSetState = function (
   }
 };
 
-const temperatureSetTarget = function (roomId: string, target: number): void {
+const temperatureSetTarget = (roomId: string, target: number) => {
   // Todo: Parametrize building/apt topic
   const topic: string = "building_apt/" + roomId + "/temp/target";
   client.publish(topic, target.toString());
 };
 
-export { mqttInit, switchSetState, temperatureSetTarget };
+const temperatureSetCurrent = (roomId: string, current: number) => {
+  // Todo: Parametrize building/apt topic
+  const topic: string = "building_apt/" + roomId + "/temp/current";
+  client.publish(topic, current.toString());
+};
+
+export {
+  mqttInit,
+  switchSetState,
+  temperatureSetCurrent,
+  temperatureSetTarget,
+};

@@ -1,4 +1,4 @@
-const Influx = require("influx");
+import { InfluxDB, FieldType, toNanoDate } from "influx";
 import {
   BROKER,
   INFLUX_HOST,
@@ -10,7 +10,7 @@ import {
 
 import { TasmotaState, TasmotaSensor } from "./tasmota";
 
-import { TemperatureTarget } from "./ctrl/temperature/temperatureControl";
+import { TemperatureTarget } from "./ctrl/temperature/temperatureTarget";
 
 const tasmotaStateMeasurementName = "TasmotaState";
 const tasmotaSensorMeasurementName = "TasmotaSensor";
@@ -44,14 +44,14 @@ const tasmotaSensorSchema = [
   {
     measurement: tasmotaSensorMeasurementName,
     fields: {
-      total: Influx.FieldType.FLOAT,
-      today: Influx.FieldType.FLOAT,
-      apparentPower: Influx.FieldType.FLOAT,
-      reactivePower: Influx.FieldType.FLOAT,
-      activePower: Influx.FieldType.FLOAT,
-      factor: Influx.FieldType.FLOAT,
-      voltage: Influx.FieldType.FLOAT,
-      current: Influx.FieldType.FLOAT,
+      total: FieldType.FLOAT,
+      today: FieldType.FLOAT,
+      apparentPower: FieldType.FLOAT,
+      reactivePower: FieldType.FLOAT,
+      activePower: FieldType.FLOAT,
+      factor: FieldType.FLOAT,
+      voltage: FieldType.FLOAT,
+      current: FieldType.FLOAT,
     },
     tags: ["mac", "id"],
   },
@@ -87,17 +87,17 @@ const tasmotaStateSchema = [
   {
     measurement: tasmotaStateMeasurementName,
     fields: {
-      rssi: Influx.FieldType.INTEGER,
-      uptime: Influx.FieldType.INTEGER,
-      heap: Influx.FieldType.INTEGER,
-      sleepMode: Influx.FieldType.STRING,
-      sleep: Influx.FieldType.INTEGER,
-      loadAvg: Influx.FieldType.INTEGER,
-      mqttCount: Influx.FieldType.INTEGER,
-      txPower: Influx.FieldType.INTEGER,
-      power: Influx.FieldType.STRING,
-      powerNumber: Influx.FieldType.INTEGER,
-      wifiDowntime: Influx.FieldType.INTEGER,
+      rssi: FieldType.INTEGER,
+      uptime: FieldType.INTEGER,
+      heap: FieldType.INTEGER,
+      sleepMode: FieldType.STRING,
+      sleep: FieldType.INTEGER,
+      loadAvg: FieldType.INTEGER,
+      mqttCount: FieldType.INTEGER,
+      txPower: FieldType.INTEGER,
+      power: FieldType.STRING,
+      powerNumber: FieldType.INTEGER,
+      wifiDowntime: FieldType.INTEGER,
     },
     tags: ["mac", "id"],
   },
@@ -107,15 +107,15 @@ const temperatureTargetSchema = [
   {
     measurement: temperatureTargetMeasurementName,
     fields: {
-      target: Influx.FieldType.FLOAT,
-      hysteresis_low: Influx.FieldType.FLOAT,
-      hysteresis_high: Influx.FieldType.FLOAT,
+      target: FieldType.FLOAT,
+      hysteresis_low: FieldType.FLOAT,
+      hysteresis_high: FieldType.FLOAT,
     },
     tags: ["name"],
   },
 ];
 
-const tasmotaStateInflux = new Influx.InfluxDB({
+const tasmotaStateInflux = new InfluxDB({
   host: INFLUX_HOST,
   database: TASMOTA_DB,
   schema: tasmotaStateSchema,
@@ -123,7 +123,7 @@ const tasmotaStateInflux = new Influx.InfluxDB({
   password: INFLUX_PASSWORD,
 });
 
-const tasmotaSensorInflux = new Influx.InfluxDB({
+const tasmotaSensorInflux = new InfluxDB({
   host: INFLUX_HOST,
   database: TASMOTA_DB,
   schema: tasmotaSensorSchema,
@@ -131,7 +131,7 @@ const tasmotaSensorInflux = new Influx.InfluxDB({
   password: INFLUX_PASSWORD,
 });
 
-const temperatureTargetInflux = new Influx.InfluxDB({
+const temperatureTargetInflux = new InfluxDB({
   host: INFLUX_HOST,
   database: TASMOTA_DB,
   schema: temperatureTargetSchema,
@@ -139,15 +139,15 @@ const temperatureTargetInflux = new Influx.InfluxDB({
   password: INFLUX_PASSWORD,
 });
 
-const TasmotaStateToInflux = function (data: TasmotaState): void {
+const TasmotaStateToInflux = (data: TasmotaState): void => {
   // console.log(JSON.stringify(data));
-  const influx_samples = [];
+  const influxSamples = [];
 
   const powerNumber = data.power === "ON" ? 1 : 0;
   const dateNanos = new Date(data.parsedAt).getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
 
-  const tasmota_point = {
+  const tasmotaPoint = {
     fields: {
       rssi: data.wifiRssi,
       uptime: data.uptimeSec,
@@ -157,19 +157,19 @@ const TasmotaStateToInflux = function (data: TasmotaState): void {
       loadAvg: data.loadAvg,
       mqttCount: data.mqttCount,
       power: data.power,
-      powerNumber: powerNumber,
+      powerNumber,
       wifiDowntime: data.wifiDowntime,
     },
     tags: {
       mac: data.mac,
       id: data.id,
     },
-    timestamp: Influx.toNanoDate(dateNanoString),
+    timestamp: toNanoDate(dateNanoString),
     measurement: tasmotaStateMeasurementName,
   };
-  influx_samples.push(tasmota_point);
+  influxSamples.push(tasmotaPoint);
   try {
-    tasmotaStateInflux.writePoints(influx_samples);
+    tasmotaStateInflux.writePoints(influxSamples);
   } catch (err: unknown) {
     if (err instanceof Error) {
       console.error(`Error saving data to InfluxDB! ${err.stack}`);
@@ -177,14 +177,13 @@ const TasmotaStateToInflux = function (data: TasmotaState): void {
   }
 };
 
-const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
-  // console.log(JSON.stringify(data));
-  const influx_samples = [];
+const TasmotaSensorToInflux = (data: TasmotaSensor): void => {
+  const influxSamples = [];
 
   const dateNanos = new Date(data.parsedAt).getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
 
-  const tasmota_point = {
+  const tasmotaPoint = {
     fields: {
       total: data.total,
       today: data.today,
@@ -199,12 +198,12 @@ const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
       mac: data.mac,
       id: data.id,
     },
-    timestamp: Influx.toNanoDate(dateNanoString),
+    timestamp: toNanoDate(dateNanoString),
     measurement: tasmotaSensorMeasurementName,
   };
-  influx_samples.push(tasmota_point);
+  influxSamples.push(tasmotaPoint);
   try {
-    tasmotaSensorInflux.writePoints(influx_samples);
+    tasmotaSensorInflux.writePoints(influxSamples);
   } catch (err: unknown) {
     if (err instanceof Error) {
       console.error(`Error saving data to InfluxDB! ${err.stack}`);
@@ -212,31 +211,30 @@ const TasmotaSensorToInflux = function (data: TasmotaSensor): void {
   }
 };
 
-const temperatureTargetToInflux = function (
+const temperatureTargetToInflux = (
   target: TemperatureTarget,
   name: string
-): void {
-  // console.log(JSON.stringify(data));
-  const influx_samples = [];
+): void => {
+  const influxSamples = [];
 
   const dateNanos = new Date().getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
 
-  const temperature_point = {
+  const temperaturePoint = {
     fields: {
       target: target.targetTemp,
       hysteresis_low: target.lowTemp,
       hysteresis_high: target.highTemp,
     },
     tags: {
-      name: name,
+      name,
     },
-    timestamp: Influx.toNanoDate(dateNanoString),
+    timestamp: toNanoDate(dateNanoString),
     measurement: temperatureTargetMeasurementName,
   };
-  influx_samples.push(temperature_point);
+  influxSamples.push(temperaturePoint);
   try {
-    tasmotaSensorInflux.writePoints(influx_samples);
+    temperatureTargetInflux.writePoints(influxSamples);
   } catch (err: unknown) {
     if (err instanceof Error) {
       console.error(`Error saving data to InfluxDB! ${err.stack}`);

@@ -26,7 +26,7 @@ Tasmota device state JSON
 
 class TasmotaState {
   public readonly id: string;
-  public readonly mac: string | null;
+  public readonly mac: string;
   public readonly parsedAt: Date;
   public readonly uptimeSec: number;
   public readonly heap: number;
@@ -40,7 +40,7 @@ class TasmotaState {
 
   public constructor(
     id: string,
-    mac: string | null,
+    mac: string,
     parsedAt: Date,
     uptimeSec: number,
     heap: number,
@@ -92,7 +92,7 @@ Tasmota Sensor JSON:
 
 class TasmotaSensor {
   public readonly id: string;
-  public readonly mac: string | null;
+  public readonly mac: string;
   public readonly parsedAt: Date;
   public readonly total: number;
   public readonly today: number;
@@ -106,7 +106,7 @@ class TasmotaSensor {
 
   public constructor(
     id: string,
-    mac: string | null,
+    mac: string,
     parsedAt: Date,
     total: number,
     today: number,
@@ -136,6 +136,7 @@ class TasmotaSensor {
 enum TasmotaSwitchState {
   Off = 0,
   On = 1,
+  Hold = 2,
 }
 
 export { TasmotaState, TasmotaSensor, TasmotaSwitchState };
