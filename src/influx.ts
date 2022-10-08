@@ -9,7 +9,7 @@ import {
 } from "../env";
 
 import { TasmotaState, TasmotaSensor } from "./tasmota";
-
+import { TemperatureControl } from "./ctrl/temperature/temperatureControl";
 import { TemperatureTarget } from "./ctrl/temperature/temperatureTarget";
 
 const tasmotaStateMeasurementName = "TasmotaState";
@@ -108,6 +108,7 @@ const temperatureTargetSchema = [
     measurement: temperatureTargetMeasurementName,
     fields: {
       target: FieldType.FLOAT,
+      current: FieldType.FLOAT,
       hysteresis_low: FieldType.FLOAT,
       hysteresis_high: FieldType.FLOAT,
     },
@@ -212,22 +213,26 @@ const TasmotaSensorToInflux = (data: TasmotaSensor): void => {
 };
 
 const temperatureTargetToInflux = (
-  target: TemperatureTarget,
-  name: string
+  control: TemperatureControl,
+  target: TemperatureTarget
 ): void => {
   const influxSamples = [];
 
   const dateNanos = new Date().getTime() * 1000 * 1000;
   const dateNanoString = dateNanos.toString();
+  const currentTemp = Number.isNaN(control.measurement)
+    ? null
+    : control.measurement;
 
   const temperaturePoint = {
     fields: {
       target: target.targetTemp,
+      current: currentTemp,
       hysteresis_low: target.lowTemp,
       hysteresis_high: target.highTemp,
     },
     tags: {
-      name,
+      name: control.roomName,
     },
     timestamp: toNanoDate(dateNanoString),
     measurement: temperatureTargetMeasurementName,

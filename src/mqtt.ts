@@ -2,6 +2,7 @@ import * as mqtt from "mqtt";
 import { BROKER } from "../env";
 import { TasmotaStateToInflux, TasmotaSensorToInflux } from "./influx";
 import { TasmotaState, TasmotaSensor, TasmotaSwitchState } from "./tasmota";
+import { handleMeasurementMessage } from "./ctrl/temperature/temperatureControl"
 
 const opts: mqtt.IClientOptions = {};
 
@@ -91,14 +92,6 @@ const handleStateMessage = (topic: string, message: Buffer) => {
   TasmotaStateToInflux(stateObj);
 };
 
-const handleMeasurementMessage = (topic: string, message: Buffer) => {
-  const data = JSON.parse(message.toString());
-  const id = topic.substring(
-    topic.lastIndexOf("building_apt/") + "building_apt/".length,
-    topic.lastIndexOf("/temp/current")
-  );
-};
-
 const mqttInit = () => {
   client.on("connect", () => {
     // TODO: Parametrize mac addresses.
@@ -121,6 +114,7 @@ const mqttInit = () => {
   client.on("message", (topic, message) => {
     // message is Buffer
     // console.log(message.toString());
+    // console.log(topic);
     try {
       // Topic contains "/STATE"
       const stateIdx = topic.lastIndexOf("/STATE");
@@ -131,8 +125,8 @@ const mqttInit = () => {
       if (sensorsIdx > 0) {
         handleSensorMessage(topic, message);
       }
-      const tempCurrentIdx = topic.lastIndexOf("/ruuvi");
-      if (tempCurrentIdx > 0) {
+      const tempCurrentIdx = topic.lastIndexOf("ruuvi/");
+      if (tempCurrentIdx >= 0) {
         handleMeasurementMessage(topic, message);
       }
     } catch (e) {

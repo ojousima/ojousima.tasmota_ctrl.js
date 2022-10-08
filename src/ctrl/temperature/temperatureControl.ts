@@ -9,16 +9,18 @@ import { TemperatureMeasurement } from "./temperatureMeasurement";
 class TemperatureControl {
   private temperatureHysteresis: number;
   private profile: TemperatureProfile;
-  private roomName: string;
+  public readonly roomName: string;
+  public readonly sensorMac: number; //Using numberic representation of MAC for MAC->room lookups
   private _measurement: TemperatureMeasurement = new TemperatureMeasurement(
     0,
     0
   );
   private ctrlTimer;
-  constructor(name: string) {
+  constructor(name: string, mac: number) {
     this.temperatureHysteresis = 1.0;
     this.profile = new TemperatureProfile();
     this.roomName = name;
+    this.sensorMac = mac;
     this.ctrlTimer = setInterval(() => {
       const target = new TemperatureTarget(
         this.profile.targetNow,
@@ -37,7 +39,7 @@ class TemperatureControl {
         }
 
         this.printAction(target, this.measurement, action);
-        temperatureTargetToInflux(target, this.roomName);
+        temperatureTargetToInflux(this, target);
       } catch (e) {
         console.log(JSON.stringify(e));
       }
@@ -63,25 +65,35 @@ class TemperatureControl {
     if (this._measurement.isValid) {
       return this._measurement.temperature;
     } else {
-      throw new Error(
-        "Room " + this.roomName + " does not have a valid measurement"
-      );
+      return NaN;
     }
+  }
+  setMeasurement(data: string) {
+    this._measurement.parseRuuviMeasurement(data);
   }
 }
 
-interface ITempCtrl {
-  [index: string]: TemperatureControl;
-}
-
-const ctrlRooms = {} as ITempCtrl;
+const ctrlRooms: TemperatureControl[] = [];
 
 const TemperatureControlInit = (): void => {
-  // TODO: Parametrize room names
-  ctrlRooms.Office = new TemperatureControl("Office");
-  ctrlRooms.Kitchen = new TemperatureControl("Kitchen");
-  ctrlRooms.Livingroom = new TemperatureControl("Livingroom");
-  ctrlRooms.Bedroom = new TemperatureControl("Bedroom");
+  ctrlRooms[0] = new TemperatureControl("Office", 0xf240fd0ce347);
+  ctrlRooms[1] = new TemperatureControl("Kitchen", 0x0);
+  ctrlRooms[2] = new TemperatureControl("Livingroom", 0xc64b56ac5b05);
+  ctrlRooms[3] = new TemperatureControl("Bedroom", 0xd8ba7cc74a83);
 };
 
-export { TemperatureControlInit };
+const handleMeasurementMessage = (topic: string, data: Buffer): void => {
+  // Find room with associated MAC address
+  // ruuvi/D4:58:E3:F8:68:11/F7:1F:CD:E9:07:E9
+  let mac = topic.substring(topic.lastIndexOf("/") + 1);
+  mac = mac.replaceAll(":", "");
+  const id = parseInt(mac, 16);
+  for (let ii = 0; ii < ctrlRooms.length; ii++) {
+    if (ctrlRooms[ii].sensorMac === id) {
+      ctrlRooms[ii].setMeasurement(data.toString());
+      break;
+    }
+  }
+};
+
+export { TemperatureControlInit, TemperatureControl, handleMeasurementMessage };
