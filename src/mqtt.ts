@@ -2,7 +2,7 @@ import * as mqtt from "mqtt";
 import { BROKER } from "../env";
 import { TasmotaStateToInflux, TasmotaSensorToInflux } from "./influx";
 import { TasmotaState, TasmotaSensor, TasmotaSwitchState } from "./tasmota";
-import { handleMeasurementMessage } from "./ctrl/temperature/temperatureControl"
+import { handleMeasurementMessage } from "./ctrl/temperature/temperatureControl";
 
 const opts: mqtt.IClientOptions = {};
 

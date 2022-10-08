@@ -10,7 +10,7 @@ class TemperatureControl {
   private temperatureHysteresis: number;
   private profile: TemperatureProfile;
   public readonly roomName: string;
-  public readonly sensorMac: number; //Using numberic representation of MAC for MAC->room lookups
+  public readonly sensorMac: number; // Using numberic representation of MAC for MAC->room lookups
   private _measurement: TemperatureMeasurement = new TemperatureMeasurement(
     0,
     0
@@ -88,9 +88,9 @@ const handleMeasurementMessage = (topic: string, data: Buffer): void => {
   let mac = topic.substring(topic.lastIndexOf("/") + 1);
   mac = mac.replaceAll(":", "");
   const id = parseInt(mac, 16);
-  for (let ii = 0; ii < ctrlRooms.length; ii++) {
-    if (ctrlRooms[ii].sensorMac === id) {
-      ctrlRooms[ii].setMeasurement(data.toString());
+  for (const room of ctrlRooms) {
+    if (room.sensorMac === id) {
+      room.setMeasurement(data.toString());
       break;
     }
   }

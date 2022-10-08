@@ -1,4 +1,4 @@
-const hexStringToBytes = function (str: string): Uint8Array {
+const hexStringToBytes = (str: string): Uint8Array => {
   if (!str) {
     return new Uint8Array();
   }
