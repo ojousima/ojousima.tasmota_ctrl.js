@@ -1,6 +1,6 @@
 {
   "name": "ojousima.tasmota_ctrl",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A project for controlling Tasmota devices over MQTT, complete with data storage to InluxDB",
   "main": "index.js",
   "scripts": {
