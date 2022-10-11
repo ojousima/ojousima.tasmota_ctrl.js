@@ -33,7 +33,9 @@ class TemperatureProfile {
   }
 
   get targetNow(): number {
-    return this.target[DateTime.now().hour];
+    const local = DateTime.local();
+    const rezoned = local.setZone("Europe/Tallinn");
+    return this.target[rezoned.hour];
   }
 }
 

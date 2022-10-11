@@ -10,7 +10,8 @@ class TemperatureControl {
   private temperatureHysteresis: number;
   private profile: TemperatureProfile;
   public readonly roomName: string;
-  public readonly sensorMac: number; // Using numberic representation of MAC for MAC->room lookups
+  private switchId: string;
+  public readonly sensorMac: number; // Using numeric representation of MAC for MAC->room lookups
   private _measurement: TemperatureMeasurement = new TemperatureMeasurement(
     0,
     0
@@ -20,6 +21,7 @@ class TemperatureControl {
     this.temperatureHysteresis = 1.0;
     this.profile = new TemperatureProfile();
     this.roomName = name;
+    this.switchId = this.roomName.toLowerCase() + '-radiator';
     this.sensorMac = mac;
     this.ctrlTimer = setInterval(() => {
       const target = new TemperatureTarget(
@@ -43,7 +45,7 @@ class TemperatureControl {
       } catch (e) {
         console.log(JSON.stringify(e));
       }
-      switchSetState(this.roomName, action);
+      switchSetState(this.switchId, action);
     }, 60000);
   }
   printAction(
@@ -77,7 +79,8 @@ const ctrlRooms: TemperatureControl[] = [];
 
 const TemperatureControlInit = (): void => {
   ctrlRooms[0] = new TemperatureControl("Office", 0xf240fd0ce347);
-  ctrlRooms[1] = new TemperatureControl("Kitchen", 0x0);
+  // Note: Kitchen and Living room share a sensor. 
+  ctrlRooms[1] = new TemperatureControl("Kitchen", 0xc64b56ac5b05);
   ctrlRooms[2] = new TemperatureControl("Livingroom", 0xc64b56ac5b05);
   ctrlRooms[3] = new TemperatureControl("Bedroom", 0xd8ba7cc74a83);
 };
@@ -88,10 +91,10 @@ const handleMeasurementMessage = (topic: string, data: Buffer): void => {
   let mac = topic.substring(topic.lastIndexOf("/") + 1);
   mac = mac.replaceAll(":", "");
   const id = parseInt(mac, 16);
+  // Iterate through every room in case of shared sensors, i.e. no break
   for (const room of ctrlRooms) {
     if (room.sensorMac === id) {
       room.setMeasurement(data.toString());
-      break;
     }
   }
 };
