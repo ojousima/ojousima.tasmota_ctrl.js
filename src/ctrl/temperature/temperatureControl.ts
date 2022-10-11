@@ -21,7 +21,7 @@ class TemperatureControl {
     this.temperatureHysteresis = 1.0;
     this.profile = new TemperatureProfile();
     this.roomName = name;
-    this.switchId = this.roomName.toLowerCase() + '-radiator';
+    this.switchId = this.roomName.toLowerCase() + "-radiator";
     this.sensorMac = mac;
     this.ctrlTimer = setInterval(() => {
       const target = new TemperatureTarget(
@@ -79,7 +79,7 @@ const ctrlRooms: TemperatureControl[] = [];
 
 const TemperatureControlInit = (): void => {
   ctrlRooms[0] = new TemperatureControl("Office", 0xf240fd0ce347);
-  // Note: Kitchen and Living room share a sensor. 
+  // Note: Kitchen and Living room share a sensor.
   ctrlRooms[1] = new TemperatureControl("Kitchen", 0xc64b56ac5b05);
   ctrlRooms[2] = new TemperatureControl("Livingroom", 0xc64b56ac5b05);
   ctrlRooms[3] = new TemperatureControl("Bedroom", 0xd8ba7cc74a83);
